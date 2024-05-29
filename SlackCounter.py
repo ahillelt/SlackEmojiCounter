@@ -14,6 +14,8 @@ rate_limit_in_seconds = 2
 # Global variable to track the last time a request was made (rate limiting)
 last_request_time = None
 
+#### Slack API Helper Funcs
+
 def rate_limit():
     global last_request_time
     if last_request_time is not None:
@@ -24,6 +26,27 @@ def rate_limit():
             time.sleep(rate_limit_in_seconds - elapsed_time)
     # Update the last request time
     last_request_time = time.time()
+
+#### Information Gathering
+
+def get_user_info(user_id):
+    try:
+        response = client.users_info(user=user_id)
+        return response['user']
+    except SlackApiError as e:
+        print(f"Error fetching user info for {user_id}: {e.response['error']}")
+        return None
+
+def get_user_names(user_ids):
+    user_names = {}
+    for user_id in user_ids:
+        try:
+            response = client.users_info(user=user_id)
+            user_names[user_id] = response['user']['real_name']
+        except SlackApiError as e:
+            print(f"Error fetching user info for {user_id}: {e.response['error']}")
+            user_names[user_id] = "Unknown User"
+    return user_names
 
 def get_channels():
     try:
@@ -84,6 +107,9 @@ def get_channel_members(channel_id):
         print(f"Error fetching members for channel {channel_id}: {e.response['error']}")
         return []
 
+
+#### Count Functions
+
 def count_emoticon_reactions(emoticon):
     channels = get_channels()
     user_reactions = defaultdict(int)
@@ -121,25 +147,6 @@ def count_emoticon_reactions(emoticon):
                                         user_reactions[reply_reaction['user']] += reply_reaction['count']
 
     return user_reactions
-
-def get_user_info(user_id):
-    try:
-        response = client.users_info(user=user_id)
-        return response['user']
-    except SlackApiError as e:
-        print(f"Error fetching user info for {user_id}: {e.response['error']}")
-        return None
-
-def get_user_names(user_ids):
-    user_names = {}
-    for user_id in user_ids:
-        try:
-            response = client.users_info(user=user_id)
-            user_names[user_id] = response['user']['real_name']
-        except SlackApiError as e:
-            print(f"Error fetching user info for {user_id}: {e.response['error']}")
-            user_names[user_id] = "Unknown User"
-    return user_names
 
 def main():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., 'thumbsup'): ")
