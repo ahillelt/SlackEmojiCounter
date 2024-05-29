@@ -149,7 +149,7 @@ def count_emoticon_reactions(emoticon):
     return user_reactions
 
 def main():
-    emoticon = input("Enter the emoticon to scan for (without colons, e.g., 'thumbsup'): ")
+    emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
     user_reactions = count_emoticon_reactions(emoticon)
 
     sorted_reactions = sorted(user_reactions.items(), key=lambda x: x[1], reverse=True)
