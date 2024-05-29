@@ -1,33 +1,33 @@
-# Written by: Alon Hillel-Tuch
-
 import os
 import time
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from collections import defaultdict
 
-# params
-client = WebClient(token='ENTER_YOUR_SLACK_APP_TOKEN')
+# Params
+client = WebClient(token='ENTER_YOUR_TOKEN') #ideally pull securely with solution of choice
 size_of_list = 25
 rate_limit_in_seconds = 2
 
-# Global variable to track the last time a request was made (rate limiting)
-last_request_time = None
+class SlackRateLimiter:
+    def __init__(self, rate_limit_in_seconds):
+        self.rate_limit_in_seconds = rate_limit_in_seconds
+        self.last_request_time = None
+
+    def rate_limit(self):
+        if self.last_request_time is not None:
+            # Calculate the time elapsed since the last request
+            elapsed_time = time.time() - self.last_request_time
+            # If less than the rate limit has passed, sleep to ensure we wait at least the rate limit duration
+            if elapsed_time < self.rate_limit_in_seconds:
+                time.sleep(self.rate_limit_in_seconds - elapsed_time)
+        # Update the last request time
+        self.last_request_time = time.time()
+
+# Create an instance of the rate limiter
+rate_limiter = SlackRateLimiter(rate_limit_in_seconds)
 
 #### Slack API Helper Funcs
-
-def rate_limit():
-    global last_request_time
-    if last_request_time is not None:
-        # Calculate the time elapsed since the last request
-        elapsed_time = time.time() - last_request_time
-        # If less than a second has passed, sleep to ensure we wait at least a second
-        if elapsed_time < rate_limit_in_seconds:
-            time.sleep(rate_limit_in_seconds - elapsed_time)
-    # Update the last request time
-    last_request_time = time.time()
-
-#### Information Gathering
 
 def get_user_info(user_id):
     try:
@@ -60,7 +60,7 @@ def get_channels():
 def get_all_messages(channel_id, channel_name):
     try:
         # Rate limit the request
-        rate_limit()
+        rate_limiter.rate_limit()
 
         # Fetch all messages, including replies and threads
         messages = []
@@ -81,7 +81,7 @@ def get_all_messages(channel_id, channel_name):
 def get_thread_messages(channel_id, thread_ts):
     try:
         # Rate limit the request
-        rate_limit()
+        rate_limiter.rate_limit()
 
         # Fetch all messages in the thread
         messages = []
@@ -106,7 +106,6 @@ def get_channel_members(channel_id):
     except SlackApiError as e:
         print(f"Error fetching members for channel {channel_id}: {e.response['error']}")
         return []
-
 
 #### Count Functions
 
