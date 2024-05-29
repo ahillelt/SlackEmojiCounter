@@ -44,8 +44,7 @@ def get_all_messages(channel_id, channel_name):
         cursor = None
         while True:
             response = client.conversations_history(channel=channel_id, cursor=cursor)
-            for message in response['messages']:
-                messages.append(message)
+            messages.extend(response['messages'])
 
             if not response['has_more']:
                 break
@@ -55,7 +54,6 @@ def get_all_messages(channel_id, channel_name):
     except SlackApiError as e:
         print(f"Error fetching messages from channel {channel_name} (ID: {channel_id}): {e.response['error']}")
         return []
-
 
 def get_thread_messages(channel_id, thread_ts):
     try:
@@ -78,34 +76,59 @@ def get_thread_messages(channel_id, thread_ts):
         print(f"Error fetching messages in thread {thread_ts} from channel {channel_id}: {e.response['error']}")
         return []
 
+def get_channel_members(channel_id):
+    try:
+        response = client.conversations_members(channel=channel_id)
+        return response['members']
+    except SlackApiError as e:
+        print(f"Error fetching members for channel {channel_id}: {e.response['error']}")
+        return []
+
 def count_emoticon_reactions(emoticon):
     channels = get_channels()
     user_reactions = defaultdict(int)
 
     for channel_id, channel_name in channels:
+        # Fetch all users in the channel
+        users = get_channel_members(channel_id)
+
+        # Fetch all messages in the channel
         messages = get_all_messages(channel_id, channel_name)
         for message in messages:
             # Check if the message has reactions
             if 'reactions' in message:
-                # Check if the specified emoticon is among the reactions
-                if any(reaction['name'] == emoticon for reaction in message['reactions']):
-                    # Increment the reaction count for the author of the message
-                    user_reactions[message['user']] += 1
+                for reaction in message['reactions']:
+                    # Check if the specified emoticon is among the reactions
+                    if reaction['name'] == emoticon:
+                        # Increment the reaction count for the author of the message
+                        user_reactions[message['user']] += reaction['count']
 
             # Check for reactions on replies within threads
-            if 'thread_ts' in message and message['thread_ts'] != message['ts']:
+            if 'thread_ts' in message:
                 thread_messages = get_thread_messages(channel_id, message['thread_ts'])
                 for thread_message in thread_messages:
                     if 'reactions' in thread_message:
-                        # Check if the specified emoticon is among the reactions
-                        if any(reaction['name'] == emoticon for reaction in thread_message['reactions']):
-                            # Increment the reaction count for the author of the message
-                            user_reactions[thread_message['user']] += 1
+                        for reaction in thread_message['reactions']:
+                            # Check if the specified emoticon is among the reactions
+                            if reaction['name'] == emoticon:
+                                # Increment the reaction count for the author of the thread message
+                                user_reactions[thread_message['user']] += reaction['count']
+
+                            # Also, count reactions on subsequent messages within the thread
+                            for reply_reaction in thread_message['reactions']:
+                                if 'user' in reply_reaction:
+                                    if reply_reaction['name'] == emoticon:
+                                        user_reactions[reply_reaction['user']] += reply_reaction['count']
 
     return user_reactions
 
-
-
+def get_user_info(user_id):
+    try:
+        response = client.users_info(user=user_id)
+        return response['user']
+    except SlackApiError as e:
+        print(f"Error fetching user info for {user_id}: {e.response['error']}")
+        return None
 
 def get_user_names(user_ids):
     user_names = {}
