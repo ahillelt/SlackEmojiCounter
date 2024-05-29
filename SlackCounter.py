@@ -47,11 +47,6 @@ def get_all_messages(channel_id, channel_name):
             for message in response['messages']:
                 messages.append(message)
 
-                # Fetch all replies for each message
-                if 'thread_ts' in message and message['thread_ts'] != message['ts']:
-                    thread_messages = get_thread_messages(channel_id, message['thread_ts'])
-                    messages.extend(thread_messages)
-
             if not response['has_more']:
                 break
             cursor = response['response_metadata']['next_cursor']
@@ -60,6 +55,7 @@ def get_all_messages(channel_id, channel_name):
     except SlackApiError as e:
         print(f"Error fetching messages from channel {channel_name} (ID: {channel_id}): {e.response['error']}")
         return []
+
 
 def get_thread_messages(channel_id, thread_ts):
     try:
@@ -72,17 +68,6 @@ def get_thread_messages(channel_id, thread_ts):
         while True:
             response = client.conversations_replies(channel=channel_id, ts=thread_ts, cursor=cursor)
             messages.extend(response['messages'])
-
-            # Check for reactions on replies within the thread
-            for reply in response['messages']:
-                if 'reactions' in reply:
-                    for reaction in reply['reactions']:
-                        for reply_user_id in reaction['users']:
-                            yield {
-                                'user': reply_user_id,
-                                'reaction': reaction['name'],
-                                'count': 1
-                            }
 
             if not response['has_more']:
                 break
@@ -100,20 +85,27 @@ def count_emoticon_reactions(emoticon):
     for channel_id, channel_name in channels:
         messages = get_all_messages(channel_id, channel_name)
         for message in messages:
-            # Count reactions on the message
+            # Check if the message has reactions
             if 'reactions' in message:
-                for reaction in message['reactions']:
-                    if reaction['name'] == emoticon:
-                        user_reactions[message['user']] += reaction['count']
+                # Check if the specified emoticon is among the reactions
+                if any(reaction['name'] == emoticon for reaction in message['reactions']):
+                    # Increment the reaction count for the author of the message
+                    user_reactions[message['user']] += 1
 
             # Check for reactions on replies within threads
             if 'thread_ts' in message and message['thread_ts'] != message['ts']:
                 thread_messages = get_thread_messages(channel_id, message['thread_ts'])
-                for reaction in thread_messages:
-                    if reaction['reaction'] == emoticon:
-                        user_reactions[reaction['user']] += reaction['count']
+                for thread_message in thread_messages:
+                    if 'reactions' in thread_message:
+                        # Check if the specified emoticon is among the reactions
+                        if any(reaction['name'] == emoticon for reaction in thread_message['reactions']):
+                            # Increment the reaction count for the author of the message
+                            user_reactions[thread_message['user']] += 1
 
     return user_reactions
+
+
+
 
 def get_user_names(user_ids):
     user_names = {}
