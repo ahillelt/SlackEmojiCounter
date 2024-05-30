@@ -26,7 +26,7 @@ class SlackRateLimiter:
 
 rate_limiter = SlackRateLimiter(rate_limit_in_seconds)
 
-# Database Setup & Interactions
+#### Database Setup & Interactions
 def initialize_database():
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
