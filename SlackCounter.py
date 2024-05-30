@@ -6,11 +6,12 @@ from slack_sdk.errors import SlackApiError
 from collections import defaultdict
 from datetime import datetime
 
-# params
+# Params
 client = WebClient(token='INSERT_YOUR_SLACK_APP_TOKEN') #ideally pull securely
 size_of_list = 25
 rate_limit_in_seconds = 2
 database = 'slack_reactions.db'
+
 class SlackRateLimiter:
     def __init__(self, rate_limit_in_seconds):
         self.rate_limit_in_seconds = rate_limit_in_seconds
@@ -25,7 +26,7 @@ class SlackRateLimiter:
 
 rate_limiter = SlackRateLimiter(rate_limit_in_seconds)
 
-# Database setup
+# Database Setup & Interactions
 def initialize_database():
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
@@ -188,7 +189,9 @@ def count_emoticon_reactions(emoticon):
                                     user_reactions[thread_message['user']] += reaction['count']
 
     return user_reactions
-    
+
+# User Helper Funcs
+
 def print_database(database):
     # Display contents of the database for verification
     conn = sqlite3.connect(database)
