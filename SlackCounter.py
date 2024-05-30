@@ -11,7 +11,6 @@ client = WebClient(token='INSERT_YOUR_SLACK_APP_TOKEN') #ideally pull securely
 size_of_list = 25
 rate_limit_in_seconds = 2
 database = 'slack_reactions.db'
-
 class SlackRateLimiter:
     def __init__(self, rate_limit_in_seconds):
         self.rate_limit_in_seconds = rate_limit_in_seconds
@@ -42,7 +41,7 @@ def initialize_database():
     ''')
     conn.commit()
     conn.close()
-    print("Database initialized and reactions table created.")
+    print("Database initialized...")
 
 def insert_reaction(message_id, user_id, reaction, count, date):
     conn = sqlite3.connect(database)
@@ -61,6 +60,18 @@ def check_reaction_exists(message_id, user_id, reaction):
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
+
+def get_most_recent_reaction_date(emoticon):
+    conn = sqlite3.connect(database)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT MAX(date) 
+        FROM reactions 
+        WHERE reaction = ?
+    ''', (emoticon,))
+    recent_date = cursor.fetchone()[0]
+    conn.close()
+    return recent_date
 
 def get_user_reactions(emoticon):
     conn = sqlite3.connect(database)
@@ -196,27 +207,37 @@ def print_top_users(user_reactions, emoticon):
     user_ids = [user for user, count in top_users]
     user_names = get_user_names(user_ids)
 
-    print(f"Top users who received '{emoticon}' reactions:")
+    print(f"\nTop users who received '{emoticon}' reaction:\n")
     for user, count in top_users:
-        print(f"{user_names[user]}: {count} reactions")
+        print(f"{user_names[user]}: {count} reaction(s)")
 
 def get_emoticon_from_user():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
     return emoticon
+    
+def pull_data_option(emoticon):
+    recent_date = get_most_recent_reaction_date(emoticon)
+    if recent_date:
+        print(f"The most recent timestamp in database for the emoticon '{emoticon}' is: {recent_date}")
+    else:
+        print(f"No data found for the emoticon '{emoticon}'.")
+    
+    user_choice = input("Enter 1 to pull new posts from Slack, or 2 to just output details from the SQL database: ")
+    
+    if user_choice == "1":
+        count_emoticon_reactions(emoticon)
 
 def main():
     initialize_database()
     
     emoticon = get_emoticon_from_user()
     
-    count_emoticon_reactions(emoticon) # Remember we have a SQLite database now
-    
+    pull_data_option(emoticon) # check with user if new data should be pulled  
     user_reactions = get_user_reactions(emoticon)
-
-    print_database(database)
+    
+    #print_database(database) #for debug purposes
+    
     print_top_users(user_reactions, emoticon)
-    
-    
 
 if __name__ == "__main__":
     main()
