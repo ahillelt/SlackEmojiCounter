@@ -21,6 +21,7 @@ csv_flag = False
 
 emoticon_string = None
 pull_int = None
+output_order = True
 
 
 class SlackRateLimiter:
@@ -231,7 +232,7 @@ def print_database(database):
     conn.close()
 
 def print_top_users(user_reactions, emoticon, csv_file=None):
-    sorted_reactions = sorted(user_reactions, key=lambda x: x[1], reverse=True)
+    sorted_reactions = sorted(user_reactions, key=lambda x: x[1], reverse=output_order)
     top_users = sorted_reactions[:size_of_list]
 
     user_ids = [user for user, count in top_users]
@@ -290,19 +291,29 @@ def main():
     
     global emoticon_string
     global pull_int
+    global output_order
     
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
     
-    parser.add_argument('-V', '--verbose', action='store_true', help='Enable verbose output')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     parser.add_argument('-csv', '--csv', metavar='CSV_FILE', nargs='?', const=default_csv_name, help='Output user list to a CSV file')
     parser.add_argument('-count', '--count', type=int, metavar='COUNT_SIZE', help='Set size of output list')
     parser.add_argument('-r', '--rate', type=int, metavar='RATE_LIMIT', help='Set rate limit of calls per second')
     
     parser.add_argument('-e', '--reaction','--emoticon', type=str, metavar='EMOTICON_STR', help='Pass reaction emoticon')
-    parser.add_argument('-p', '--pull', type=int, metavar='PULL_CHOICE', help='Pull from Slack & DB (1) or just from db (2)')
+    parser.add_argument('-p', '--pull', type=int, metavar='PULL_CHOICE', help='Pull from Slack & DB (1) or just from DB (2)')
+    
+    parser.add_argument('-o', '--output', type=str, metavar='OUTPUT_STR', help="set as 'desc' to change order")
+    
     args = parser.parse_args()
     
     verbose = args.verbose
+    
+    if args.output is not None:
+        if (args.output).lower() == "asc" or (args.output).lower() == "ascend":
+            output_order = False
+        if verbose:
+            print("Output order: ", output_order)
       
     if args.count is not None:
         size_of_list = args.count
