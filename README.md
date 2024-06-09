@@ -18,7 +18,7 @@ This Python script scans a Slack workspace to count the number of reactions for 
 
 ## Setup
 * Create a Slack app and obtain a bot token with the required scopes.
-* Invite the bot to the channels you want it to scan.
+* (NO LONGER NEEDED) Invite the bot to the channels you want it to scan.
 * Replace 'your-slack-bot-token' in the script with your actual bot token.
 * Feel free to tweak the rate-limiter for your specific Slack configuration. Set to not trigger the basic (free) Slack workspace params.
 
@@ -29,6 +29,13 @@ python SlackCounter.py
 ```
 
 If the SQL database does not exist locally yet, it will be created at this point. 
+
+You can call 'verbose mode' to get a more detailed output of work done. Only required for diagnoseing or curious parties. 
+
+```
+python SlackCounter.py -V
+```
+
 
 2. Enter the emoticon name (without colons, e.g., +1, rocket, heart) when prompted.
 3. The script will output the top users (received the most of the specified emoticon), along with a tally of the number of reactions received.
