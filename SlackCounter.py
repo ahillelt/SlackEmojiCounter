@@ -6,14 +6,18 @@ from slack_sdk.errors import SlackApiError
 from collections import defaultdict
 from datetime import datetime
 import argparse
+import csv
 from tqdm import tqdm
 
 # Params
-client = WebClient(token='INSERT-SLACK-TOKEN-HERE')  # ideally pull securely
+client = WebClient(token='INSERT-TOKEN-HERE')  # ideally pull securely
+
+default_csv_name = "SlackCounter.csv"
 size_of_list = 25
 rate_limit_in_seconds = 1
 database = 'slack_reactions.db'
 verbose = False
+csv_flag = False
 
 class SlackRateLimiter:
     def __init__(self, rate_limit_in_seconds):
@@ -222,7 +226,7 @@ def print_database(database):
             print(row)
     conn.close()
 
-def print_top_users(user_reactions, emoticon):
+def print_top_users(user_reactions, emoticon, csv_file=None):
     sorted_reactions = sorted(user_reactions, key=lambda x: x[1], reverse=True)
     top_users = sorted_reactions[:size_of_list]
 
@@ -233,6 +237,20 @@ def print_top_users(user_reactions, emoticon):
     for user, count in top_users:
         print(f"{user_names[user]}: {count} reaction(s)")
     print("\n")
+    
+    if csv_flag:
+        # Determine the CSV file path
+        if csv_file is None:
+            csv_file = "SlackCounter.csv"
+
+        # Write the user list to the CSV file
+        with open(csv_file, 'w', newline='') as csvfile:
+            fieldnames = ['User ID', 'User Name', 'Reaction Count']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for user, count in top_users:
+                writer.writerow({'User ID': user, 'User Name': user_names[user], 'Reaction Count': count})
+  
     
 def get_emoticon_from_user():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
@@ -253,11 +271,21 @@ def pull_data_option(emoticon):
 
 def main():
     global verbose
+    global csv_flag
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
     parser.add_argument('-V', '--verbose', action='store_true', help='Enable verbose output')
+    parser.add_argument('--csv', '-csv', metavar='CSV_FILE', nargs='?', const=default_csv_name, help='Output user list to a CSV file')
     args = parser.parse_args()
+    
 
     verbose = args.verbose
+
+    if args.csv is not None:
+        csv_flag = True
+        csv_file = args.csv if args.csv != default_csv_name else None  # Use the provided filename or None if it's the default
+    else:
+        csv_flag = False
+        csv_file = None  # No CSV file name provided
 
     initialize_database()
 
@@ -266,9 +294,9 @@ def main():
     pull_data_option(emoticon)  # check with user if new data should be pulled
     user_reactions = get_user_reactions(emoticon)
 
-    # print_database(database) # for debug purposes
+    print_top_users(user_reactions, emoticon, csv_file=csv_file)
 
-    print_top_users(user_reactions, emoticon)
 
+    
 if __name__ == "__main__":
     main()
