@@ -19,6 +19,10 @@ database = 'slack_reactions.db'
 verbose = False
 csv_flag = False
 
+emoticon_string = None
+pull_int = None
+
+
 class SlackRateLimiter:
     def __init__(self, rate_limit_in_seconds):
         self.rate_limit_in_seconds = rate_limit_in_seconds
@@ -250,10 +254,12 @@ def print_top_users(user_reactions, emoticon, csv_file=None):
             writer.writeheader()
             for user, count in top_users:
                 writer.writerow({'User ID': user, 'User Name': user_names[user], 'Reaction Count': count})
-  
-    
+   
 def get_emoticon_from_user():
-    emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
+    if emoticon_string is not None:
+        emoticon = emoticon_string
+    else:
+        emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
     return emoticon
 
 def pull_data_option(emoticon):
@@ -263,10 +269,17 @@ def pull_data_option(emoticon):
             print(f"The most recent timestamp in database for the emoticon '{emoticon}' is: {recent_date}")
         else:
             print(f"No data found for the emoticon '{emoticon}'.")
-
-    user_choice = input("Enter 1 to pull new posts from Slack, or 2 to just output details from the SQL database: ")
-
-    if user_choice == "1":
+    
+    if pull_int is not None:
+        user_choice = pull_int
+    else:
+        while(True):
+            user_choice = int(input("Enter 1 to pull new posts from Slack, or 2 to just output details from the SQL database: "))
+            if user_choice == int(1) or user_choice == int(2):
+                break
+            else:
+                print ("Please select '1' or '2'. Try again...")
+    if user_choice == int(1):
         count_emoticon_reactions(emoticon)
 
 def main():
@@ -275,6 +288,9 @@ def main():
     global size_of_list
     global rate_limit_in_seconds
     
+    global emoticon_string
+    global pull_int
+    
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
     
     parser.add_argument('-V', '--verbose', action='store_true', help='Enable verbose output')
@@ -282,14 +298,26 @@ def main():
     parser.add_argument('-count', '--count', type=int, metavar='COUNT_SIZE', help='Set size of output list')
     parser.add_argument('-r', '--rate', type=int, metavar='RATE_LIMIT', help='Set rate limit of calls per second')
     
+    parser.add_argument('-e', '--reaction','--emoticon', type=str, metavar='EMOTICON_STR', help='Pass reaction emoticon')
+    parser.add_argument('-p', '--pull', type=int, metavar='PULL_CHOICE', help='Pull from Slack & DB (1) or just from db (2)')
     args = parser.parse_args()
     
     verbose = args.verbose
-    
+      
     if args.count is not None:
         size_of_list = args.count
         if verbose:
             print("List size: ", size_of_list)
+            
+    if args.reaction is not None:
+        emoticon_string = args.reaction
+        if verbose:
+            print("Reaction Emoticon: ", emoticon_string)
+    
+    if args.pull is not None:
+        pull_int = args.pull
+        if verbose:
+            print("Pull selection: ", pull_int)
         
     if args.rate is not None:
         rate_limit_in_seconds = args.rate
