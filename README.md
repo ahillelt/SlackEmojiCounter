@@ -6,7 +6,8 @@ This Python script scans a Slack workspace to count the number of reactions for 
 * Scans all channels for specific emoticon reaction.
 * Counts the number of times each user received the specified emoticon as a reaction to their post(s).
 * Outputs the top users with the most reactions for the specified emoticon.
-* Provides basic error messages if the bot is not a member of certain channels, including channel names and IDs. Use this to invite or not. 
+* Provides basic error messages if the bot is not a member of certain channels, including channel names and IDs. Use this to invite or not.
+* Sanitized SQL database, doesn't need encryption for confidentiality purposes (integrity and non-repudiation not considered)
 
 ## Prerequisites
 * Python 3.x
