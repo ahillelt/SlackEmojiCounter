@@ -5,12 +5,14 @@ from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from collections import defaultdict
 from datetime import datetime
+import argparse
 
 # Params
-client = WebClient(token='INSERT-SLACK-TOKEN-HERE') # ideally pull securely
+client = WebClient(token='INSERT-YOUR-TOKEN-HERE')  # ideally pull securely
 size_of_list = 25
 rate_limit_in_seconds = 1
 database = 'slack_reactions.db'
+verbose = False
 
 class SlackRateLimiter:
     def __init__(self, rate_limit_in_seconds):
@@ -42,13 +44,14 @@ def initialize_database():
     ''')
     conn.commit()
     conn.close()
-    print("Database initialized...")
+    if verbose:
+        print("Database initialized...")
 
-def insert_reaction(message_id, user_id, reaction, count, date): #insert or replace to enable updates
+def insert_reaction(message_id, user_id, reaction, count, date):
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT OR REPLACE INTO reactions (message_id, user_id, reaction, count, date) 
+        INSERT OR REPLACE INTO reactions (message_id, user_id, reaction, count, date)
         VALUES (?, ?, ?, ?, ?)
     ''', (message_id, user_id, reaction, count, date))
     conn.commit()
@@ -94,7 +97,8 @@ def get_user_info(user_id):
         response = client.users_info(user=user_id)
         return response['user']
     except SlackApiError as e:
-        print(f"Error fetching user info for {user_id}: {e.response['error']}")
+        if verbose:
+            print(f"Error fetching user info for {user_id}: {e.response['error']}")
         return None
 
 def get_user_names(user_ids):
@@ -104,7 +108,8 @@ def get_user_names(user_ids):
             response = client.users_info(user=user_id)
             user_names[user_id] = response['user']['real_name']
         except SlackApiError as e:
-            print(f"Error fetching user info for {user_id}: {e.response['error']}")
+            if verbose:
+                print(f"Error fetching user info for {user_id}: {e.response['error']}")
             user_names[user_id] = "Unknown User"
     return user_names
 
@@ -114,7 +119,8 @@ def get_channels():
         channels = response['channels']
         return [(channel['id'], channel['name']) for channel in channels]
     except SlackApiError as e:
-        print(f"Error fetching channels: {e.response['error']}")
+        if verbose:
+            print(f"Error fetching channels: {e.response['error']}")
         return []
 
 def get_all_messages(channel_id, channel_name):
@@ -130,7 +136,8 @@ def get_all_messages(channel_id, channel_name):
             cursor = response['response_metadata']['next_cursor']
         return messages
     except SlackApiError as e:
-        print(f"Error fetching messages from channel {channel_name} (ID: {channel_id}): {e.response['error']}")
+        if verbose:
+            print(f"Error fetching messages from channel {channel_name} (ID: {channel_id}): {e.response['error']}")
         return []
 
 def get_thread_messages(channel_id, thread_ts):
@@ -146,7 +153,8 @@ def get_thread_messages(channel_id, thread_ts):
             cursor = response['response_metadata']['next_cursor']
         return messages
     except SlackApiError as e:
-        print(f"Error fetching messages in thread {thread_ts} from channel {channel_id}: {e.response['error']}")
+        if verbose:
+            print(f"Error fetching messages in thread {thread_ts} from channel {channel_id}: {e.response['error']}")
         return []
 
 def get_channel_members(channel_id):
@@ -154,7 +162,8 @@ def get_channel_members(channel_id):
         response = client.conversations_members(channel=channel_id)
         return response['members']
     except SlackApiError as e:
-        print(f"Error fetching members for channel {channel_id}: {e.response['error']}")
+        if verbose:
+            print(f"Error fetching members for channel {channel_id}: {e.response['error']}")
         return []
 
 #### Count Functions
@@ -171,7 +180,8 @@ def count_emoticon_reactions(emoticon):
             if 'reactions' in message:
                 for reaction in message['reactions']:
                     if reaction['name'] == emoticon:
-                        print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
+                        if verbose:
+                            print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
                         insert_reaction(message['ts'], message['user'], reaction['name'], reaction['count'], message_date)
                         user_reactions[message['user']] += reaction['count']
 
@@ -182,7 +192,8 @@ def count_emoticon_reactions(emoticon):
                     if 'reactions' in thread_message:
                         for reaction in thread_message['reactions']:
                             if reaction['name'] == emoticon:
-                                print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
+                                if verbose:
+                                    print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
                                 insert_reaction(thread_message['ts'], thread_message['user'], reaction['name'], reaction['count'], thread_message_date)
                                 user_reactions[thread_message['user']] += reaction['count']
 
@@ -196,9 +207,10 @@ def print_database(database):
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM reactions')
     rows = cursor.fetchall()
-    print("Database contents:")
-    for row in rows:
-        print(row)
+    if verbose:
+        print("Database contents:")
+        for row in rows:
+            print(row)
     conn.close()
 
 def print_top_users(user_reactions, emoticon):
@@ -208,9 +220,10 @@ def print_top_users(user_reactions, emoticon):
     user_ids = [user for user, count in top_users]
     user_names = get_user_names(user_ids)
 
-    print(f"\nTop users who received '{emoticon}' reaction:\n")
-    for user, count in top_users:
-        print(f"{user_names[user]}: {count} reaction(s)")
+    if verbose:
+        print(f"\nTop users who received '{emoticon}' reaction:\n")
+        for user, count in top_users:
+            print(f"{user_names[user]}: {count} reaction(s)")
 
 def get_emoticon_from_user():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
@@ -218,25 +231,33 @@ def get_emoticon_from_user():
 
 def pull_data_option(emoticon):
     recent_date = get_most_recent_reaction_date(emoticon)
-    if recent_date:
-        print(f"The most recent timestamp in database for the emoticon '{emoticon}' is: {recent_date}")
-    else:
-        print(f"No data found for the emoticon '{emoticon}'.")
+    if verbose:
+        if recent_date:
+            print(f"The most recent timestamp in database for the emoticon '{emoticon}' is: {recent_date}")
+        else:
+            print(f"No data found for the emoticon '{emoticon}'.")
 
-    user_choice = input("Enter 1 to pull new posts (update available old ones) from Slack, or 2 to just output details from the SQL database: ")
+    user_choice = input("Enter 1 to pull new posts from Slack, or 2 to just output details from the SQL database: ")
 
     if user_choice == "1":
         count_emoticon_reactions(emoticon)
-        
+
 def main():
+    global verbose
+    parser = argparse.ArgumentParser(description="Slack Reaction Counter")
+    parser.add_argument('-V', '--verbose', action='store_true', help='Enable verbose output')
+    args = parser.parse_args()
+
+    verbose = args.verbose
+
     initialize_database()
 
     emoticon = get_emoticon_from_user()
 
-    pull_data_option(emoticon) # check with user if new data should be pulled  
+    pull_data_option(emoticon)  # check with user if new data should be pulled
     user_reactions = get_user_reactions(emoticon)
 
-    #print_database(database) #for debug purposes
+    # print_database(database) # for debug purposes
 
     print_top_users(user_reactions, emoticon)
 
