@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import datetime
 
 # Params
-client = WebClient(token='INSERT-YOUR-SLACK-TOKEN-HERE') # ideally pull securely
+client = WebClient(token='INSERT-SLACK-TOKEN-HERE') # ideally pull securely
 size_of_list = 25
 rate_limit_in_seconds = 1
 database = 'slack_reactions.db'
@@ -171,10 +171,9 @@ def count_emoticon_reactions(emoticon):
             if 'reactions' in message:
                 for reaction in message['reactions']:
                     if reaction['name'] == emoticon:
-                        for user in reaction['users']:
-                            print(f"Inserting reaction: {message['ts']}, {user}, {reaction['name']}, {1}, {message_date}")
-                            insert_reaction(message['ts'], user, reaction['name'], 1, message_date)
-                            user_reactions[user] += 1
+                        print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
+                        insert_reaction(message['ts'], message['user'], reaction['name'], reaction['count'], message_date)
+                        user_reactions[message['user']] += reaction['count']
 
             if 'thread_ts' in message:
                 thread_messages = get_thread_messages(channel_id, message['thread_ts'])
@@ -183,10 +182,9 @@ def count_emoticon_reactions(emoticon):
                     if 'reactions' in thread_message:
                         for reaction in thread_message['reactions']:
                             if reaction['name'] == emoticon:
-                                for user in reaction['users']:
-                                    print(f"Inserting thread reaction: {thread_message['ts']}, {user}, {reaction['name']}, {1}, {thread_message_date}")
-                                    insert_reaction(thread_message['ts'], user, reaction['name'], 1, thread_message_date)
-                                    user_reactions[user] += 1
+                                print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
+                                insert_reaction(thread_message['ts'], thread_message['user'], reaction['name'], reaction['count'], thread_message_date)
+                                user_reactions[thread_message['user']] += reaction['count']
 
     return user_reactions
 
