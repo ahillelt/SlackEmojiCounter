@@ -7,9 +7,9 @@ from collections import defaultdict
 from datetime import datetime
 
 # Params
-client = WebClient(token='INSERT_YOUR_SLACK_APP_TOKEN') #ideally pull securely
+client = WebClient(token='INSERT-YOUR-SLACK-TOKEN-HERE') # ideally pull securely
 size_of_list = 25
-rate_limit_in_seconds = 2
+rate_limit_in_seconds = 1
 database = 'slack_reactions.db'
 
 class SlackRateLimiter:
@@ -44,11 +44,11 @@ def initialize_database():
     conn.close()
     print("Database initialized...")
 
-def insert_reaction(message_id, user_id, reaction, count, date):
+def insert_reaction(message_id, user_id, reaction, count, date): #insert or replace to enable updates
     conn = sqlite3.connect(database)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT OR IGNORE INTO reactions (message_id, user_id, reaction, count, date)
+        INSERT OR REPLACE INTO reactions (message_id, user_id, reaction, count, date) 
         VALUES (?, ?, ?, ?, ?)
     ''', (message_id, user_id, reaction, count, date))
     conn.commit()
@@ -171,10 +171,10 @@ def count_emoticon_reactions(emoticon):
             if 'reactions' in message:
                 for reaction in message['reactions']:
                     if reaction['name'] == emoticon:
-                        if not check_reaction_exists(message['ts'], message['user'], reaction['name']):
-                            print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
-                            insert_reaction(message['ts'], message['user'], reaction['name'], reaction['count'], message_date)
-                            user_reactions[message['user']] += reaction['count']
+                        for user in reaction['users']:
+                            print(f"Inserting reaction: {message['ts']}, {user}, {reaction['name']}, {1}, {message_date}")
+                            insert_reaction(message['ts'], user, reaction['name'], 1, message_date)
+                            user_reactions[user] += 1
 
             if 'thread_ts' in message:
                 thread_messages = get_thread_messages(channel_id, message['thread_ts'])
@@ -183,10 +183,10 @@ def count_emoticon_reactions(emoticon):
                     if 'reactions' in thread_message:
                         for reaction in thread_message['reactions']:
                             if reaction['name'] == emoticon:
-                                if not check_reaction_exists(thread_message['ts'], thread_message['user'], reaction['name']):
-                                    print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
-                                    insert_reaction(thread_message['ts'], thread_message['user'], reaction['name'], reaction['count'], thread_message_date)
-                                    user_reactions[thread_message['user']] += reaction['count']
+                                for user in reaction['users']:
+                                    print(f"Inserting thread reaction: {thread_message['ts']}, {user}, {reaction['name']}, {1}, {thread_message_date}")
+                                    insert_reaction(thread_message['ts'], user, reaction['name'], 1, thread_message_date)
+                                    user_reactions[user] += 1
 
     return user_reactions
 
@@ -202,7 +202,7 @@ def print_database(database):
     for row in rows:
         print(row)
     conn.close()
-    
+
 def print_top_users(user_reactions, emoticon):
     sorted_reactions = sorted(user_reactions, key=lambda x: x[1], reverse=True)
     top_users = sorted_reactions[:size_of_list]
@@ -217,29 +217,29 @@ def print_top_users(user_reactions, emoticon):
 def get_emoticon_from_user():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
     return emoticon
-    
+
 def pull_data_option(emoticon):
     recent_date = get_most_recent_reaction_date(emoticon)
     if recent_date:
         print(f"The most recent timestamp in database for the emoticon '{emoticon}' is: {recent_date}")
     else:
         print(f"No data found for the emoticon '{emoticon}'.")
-    
-    user_choice = input("Enter 1 to pull new posts from Slack, or 2 to just output details from the SQL database: ")
-    
+
+    user_choice = input("Enter 1 to pull new posts (update available old ones) from Slack, or 2 to just output details from the SQL database: ")
+
     if user_choice == "1":
         count_emoticon_reactions(emoticon)
-
+        
 def main():
     initialize_database()
-    
+
     emoticon = get_emoticon_from_user()
-    
+
     pull_data_option(emoticon) # check with user if new data should be pulled  
     user_reactions = get_user_reactions(emoticon)
-    
+
     #print_database(database) #for debug purposes
-    
+
     print_top_users(user_reactions, emoticon)
 
 if __name__ == "__main__":
