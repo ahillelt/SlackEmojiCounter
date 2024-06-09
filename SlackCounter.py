@@ -6,9 +6,10 @@ from slack_sdk.errors import SlackApiError
 from collections import defaultdict
 from datetime import datetime
 import argparse
+from tqdm import tqdm
 
 # Params
-client = WebClient(token='INSERT-YOUR-TOKEN-HERE')  # ideally pull securely
+client = WebClient(token='INSERT-SLACK-TOKEN-HERE')  # ideally pull securely
 size_of_list = 25
 rate_limit_in_seconds = 1
 database = 'slack_reactions.db'
@@ -172,31 +173,39 @@ def count_emoticon_reactions(emoticon):
     channels = get_channels()
     user_reactions = defaultdict(int)
 
-    for channel_id, channel_name in channels:
-        users = get_channel_members(channel_id)
-        messages = get_all_messages(channel_id, channel_name)
-        for message in messages:
-            message_date = datetime.fromtimestamp(float(message['ts'])).strftime('%Y-%m-%d')
-            if 'reactions' in message:
-                for reaction in message['reactions']:
-                    if reaction['name'] == emoticon:
-                        if verbose:
-                            print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
-                        insert_reaction(message['ts'], message['user'], reaction['name'], reaction['count'], message_date)
-                        user_reactions[message['user']] += reaction['count']
+    # Initialize the progress bar
+    total_channels = len(channels)
+    with tqdm(total=total_channels, desc="Processing Channels") as pbar:
+        if verbose:
+            print("\n")
+        for channel_id, channel_name in channels:
+            users = get_channel_members(channel_id)
+            messages = get_all_messages(channel_id, channel_name)
+            for message in messages:
+                message_date = datetime.fromtimestamp(float(message['ts'])).strftime('%Y-%m-%d')
+                if 'reactions' in message:
+                    for reaction in message['reactions']:
+                        if reaction['name'] == emoticon:
+                            if verbose:
+                                print(f"Inserting reaction: {message['ts']}, {message['user']}, {reaction['name']}, {reaction['count']}, {message_date}")
+                            insert_reaction(message['ts'], message['user'], reaction['name'], reaction['count'], message_date)
+                            user_reactions[message['user']] += reaction['count']
 
-            if 'thread_ts' in message:
-                thread_messages = get_thread_messages(channel_id, message['thread_ts'])
-                for thread_message in thread_messages:
-                    thread_message_date = datetime.fromtimestamp(float(thread_message['ts'])).strftime('%Y-%m-%d')
-                    if 'reactions' in thread_message:
-                        for reaction in thread_message['reactions']:
-                            if reaction['name'] == emoticon:
-                                if verbose:
-                                    print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
-                                insert_reaction(thread_message['ts'], thread_message['user'], reaction['name'], reaction['count'], thread_message_date)
-                                user_reactions[thread_message['user']] += reaction['count']
+                if 'thread_ts' in message:
+                    thread_messages = get_thread_messages(channel_id, message['thread_ts'])
+                    for thread_message in thread_messages:
+                        thread_message_date = datetime.fromtimestamp(float(thread_message['ts'])).strftime('%Y-%m-%d')
+                        if 'reactions' in thread_message:
+                            for reaction in thread_message['reactions']:
+                                if reaction['name'] == emoticon:
+                                    if verbose:
+                                        print(f"Inserting thread reaction: {thread_message['ts']}, {thread_message['user']}, {reaction['name']}, {reaction['count']}, {thread_message_date}")
+                                    insert_reaction(thread_message['ts'], thread_message['user'], reaction['name'], reaction['count'], thread_message_date)
+                                    user_reactions[thread_message['user']] += reaction['count']
 
+            pbar.update(1)  # Update the progress bar after processing each channel
+            if verbose:
+                print("\n")
     return user_reactions
 
 # User Helper Funcs
@@ -220,11 +229,11 @@ def print_top_users(user_reactions, emoticon):
     user_ids = [user for user, count in top_users]
     user_names = get_user_names(user_ids)
 
-    if verbose:
-        print(f"\nTop users who received '{emoticon}' reaction:\n")
-        for user, count in top_users:
-            print(f"{user_names[user]}: {count} reaction(s)")
-
+    print(f"\nTop users who received '{emoticon}' reaction:\n")
+    for user, count in top_users:
+        print(f"{user_names[user]}: {count} reaction(s)")
+    print("\n")
+    
 def get_emoticon_from_user():
     emoticon = input("Enter the emoticon to scan for (without colons, e.g., '+1'): ")
     return emoticon
