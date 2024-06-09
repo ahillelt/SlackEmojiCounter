@@ -272,17 +272,35 @@ def pull_data_option(emoticon):
 def main():
     global verbose
     global csv_flag
+    global size_of_list
+    global rate_limit_in_seconds
+    
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
+    
     parser.add_argument('-V', '--verbose', action='store_true', help='Enable verbose output')
-    parser.add_argument('--csv', '-csv', metavar='CSV_FILE', nargs='?', const=default_csv_name, help='Output user list to a CSV file')
+    parser.add_argument('-csv', '--csv', metavar='CSV_FILE', nargs='?', const=default_csv_name, help='Output user list to a CSV file')
+    parser.add_argument('-count', '--count', type=int, metavar='COUNT_SIZE', help='Set size of output list')
+    parser.add_argument('-r', '--rate', type=int, metavar='RATE_LIMIT', help='Set rate limit of calls per second')
+    
     args = parser.parse_args()
     
-
     verbose = args.verbose
+    
+    if args.count is not None:
+        size_of_list = args.count
+        if verbose:
+            print("List size: ", size_of_list)
+        
+    if args.rate is not None:
+        rate_limit_in_seconds = args.rate
+        if verbose:
+            print("Rate limit (seconds): ", rate_limit_in_seconds)
 
     if args.csv is not None:
         csv_flag = True
         csv_file = args.csv if args.csv != default_csv_name else None  # Use the provided filename or None if it's the default
+        if verbose:
+            print("CSV File: ",csv_file)
     else:
         csv_flag = False
         csv_file = None  # No CSV file name provided
@@ -295,7 +313,6 @@ def main():
     user_reactions = get_user_reactions(emoticon)
 
     print_top_users(user_reactions, emoticon, csv_file=csv_file)
-
 
     
 if __name__ == "__main__":
