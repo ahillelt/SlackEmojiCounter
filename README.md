@@ -7,14 +7,15 @@ This Python script scans a Slack workspace to count the number of reactions for 
 * Counts the number of times each user received the specified emoticon as a reaction to their post(s).
 * Allows you to collect select data and store locally, can be beneficial for Slack accounts with limited history retention
 * Outputs the top users with the most reactions for the specified emoticon.
-* Provides basic error messages if the bot is not a member of certain channels, including channel names and IDs. Use this to invite or not.
-* Sanitized SQL database, doesn't need encryption for confidentiality purposes (integrity and non-repudiation not considered)
+* Provides basic error messages if the bot is not a member of certain channels and that channel is restrictive, including channel names and IDs. Use this to invite or not.
+* Stores data locally in a sanitized SQL database, doesn't need encryption for confidentiality purposes (integrity and non-repudiation not considered)
 * Command line argument support
   
 
 ## Prerequisites
 * Python 3.x
 * slack_sdk library (pip install slack_sdk)
+* tqdm (for progress bar)
 * A Slack app with a bot token and necessary permissions (channels:history, groups:history, im:history, mpim:history, reactions:read, users:read).
 
 ## Setup
