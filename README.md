@@ -118,3 +118,12 @@ All arguments can be combined. For example verbose mode enabled, custom csv, 5 s
 python SlackCounter.py -v -r 5 -csv output.csv -e nyu -p 1 -o asc -t MY-TOKEN-TO-SLACK
 ```
 ![image](https://github.com/ahillelt/SlackEmojiCounter/assets/1520612/77314f12-b148-4649-b74f-42252a9c0a1f)
+
+
+## Features in Development
+
+* a method that will test what the rate limit is for the specific slack workspace and store that for future use
+* disable any print to screen, so it just silently updates sql db
+* Full silent mode, no progress bar even
+* hashivault support
+* pass Google Docs pickle so it can just store outputs in a google doc on your drive (allowing this to run as a job in background)
