@@ -1,6 +1,7 @@
 import os
 import time
 import sqlite3
+import sys
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from collections import defaultdict
@@ -289,41 +290,55 @@ def pull_data_option(emoticon):
                 print ("Please select '1' or '2'. Try again...")
     if user_choice == int(1):
         count_emoticon_reactions(emoticon)
+        
 
-def main():
-    global verbose
-    global csv_flag
-    global size_of_list
-    global rate_limit_in_seconds
+def check_token_validity(token):
+    test_client = WebClient(token=token)
+    try:
+        response = test_client.auth_test()
+        if response['ok']:
+            return True
+    except SlackApiError as e:
+        if verbose:
+            print(f"Token Validation Error: {e.response['error']}")
+        return False
+    return False        
     
-    global emoticon_string
-    global pull_int
-    global output_order
-    
-    global client
-    global token_param
-    
-    
+def validate_token(token):
+    # Check if the token is valid
+    if not check_token_validity(token_param):
+        print("Invalid Slack token provided. Please check the token and try again.")
+        sys.exit(1)
+
+def parse_args():
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
     
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
     parser.add_argument('-csv', '--csv', metavar='CSV_FILE', nargs='?', const=default_csv_name, help='Output user list to a CSV file')
     parser.add_argument('-count', '--count', type=int, metavar='COUNT_SIZE', help='Set size of output list')
     parser.add_argument('-r', '--rate', type=int, metavar='RATE_LIMIT', help='Set rate limit of calls per second')
-    
-    parser.add_argument('-e', '--reaction','--emoticon', type=str, metavar='EMOTICON_STR', help='Pass reaction emoticon')
+    parser.add_argument('-e', '--reaction', '--emoticon', type=str, metavar='EMOTICON_STR', help='Pass reaction emoticon')
     parser.add_argument('-p', '--pull', type=int, metavar='PULL_CHOICE', help='Pull from Slack & DB (1) or just from DB (2)')
-    
     parser.add_argument('-o', '--output', type=str, metavar='OUTPUT_STR', help="Set as 'desc' to change order")
-    
     parser.add_argument('-t', '-token', '-T', '--token', type=str, metavar='TOKEN_STR', help="Pass Slack Token")
     
-    args = parser.parse_args()
+    return parser.parse_args()
+
+def process_args(args):
+    global verbose
+    global csv_flag
+    global size_of_list
+    global rate_limit_in_seconds
+    global emoticon_string
+    global pull_int
+    global output_order
+    global token_param
+    global csv_file
     
     verbose = args.verbose
     
     if args.output is not None:
-        if (args.output).lower() == "asc" or (args.output).lower() == "ascend":
+        if args.output.lower() == "asc" or args.output.lower() == "ascend":
             output_order = False
         if verbose:
             print("Output order: ", output_order)
@@ -332,10 +347,7 @@ def main():
         token_param = args.token
         if verbose:
             print("Token Passed: ", token_param)
-            
-    client = WebClient(token=token_param) #setting up our Slack Web Client
-    
-      
+
     if args.count is not None:
         size_of_list = args.count
         if verbose:
@@ -360,11 +372,26 @@ def main():
         csv_flag = True
         csv_file = args.csv if args.csv != default_csv_name else None  # Use the provided filename or None if it's the default
         if verbose:
-            print("CSV File: ",csv_file)
+            print("CSV File: ", csv_file)
     else:
         csv_flag = False
         csv_file = None  # No CSV file name provided
 
+def main():
+    global client
+    global token_param
+    
+    # Process command line args    
+    args = parse_args()
+    process_args(args)
+
+    # Check if the token is valid
+    validate_token(token_param)
+    
+    # Setting up our Slack Web Client    
+    client = WebClient(token=token_param) 
+    
+    
     initialize_database()
 
     emoticon = get_emoticon_from_user()
