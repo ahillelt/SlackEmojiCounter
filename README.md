@@ -1,6 +1,6 @@
 Written by: Alon Hillel-Tuch
 
-This Python script scans a Slack workspace to count the number of reactions for a specific emoticon and tallies the top users who used that emoticon. It utilizes the Slack API to fetch messages and reactions from channels the bot is a member of.
+This Python script scans a Slack workspace to count the number of reactions for a specific emoticon and tallies the top users who used that emoticon. It utilizes the Slack API to fetch messages and reactions from channels the bot is a member of. Support command line interfacing, progress bar, CSV output, SQL storage, and more. 
 
 ## Features
 * Scans all channels for specific emoticon reaction.
@@ -11,6 +11,7 @@ This Python script scans a Slack workspace to count the number of reactions for 
 * Stores data locally in a sanitized SQL database, doesn't need encryption for confidentiality purposes (integrity and non-repudiation not considered)
 * Command line argument support
 * Supporting passing Slack token as an argument
+* tqdm progress bar
   
 
 ## Prerequisites
@@ -116,3 +117,4 @@ All arguments can be combined. For example verbose mode enabled, custom csv, 5 s
 ```
 python SlackCounter.py -v -r 5 -csv output.csv -e nyu -p 1 -o asc -t MY-TOKEN-TO-SLACK
 ```
+![image](https://github.com/ahillelt/SlackEmojiCounter/assets/1520612/77314f12-b148-4649-b74f-42252a9c0a1f)
