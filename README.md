@@ -10,6 +10,7 @@ This Python script scans a Slack workspace to count the number of reactions for 
 * Provides basic error messages if the bot is not a member of certain channels and that channel is restrictive, including channel names and IDs. Use this to invite or not.
 * Stores data locally in a sanitized SQL database, doesn't need encryption for confidentiality purposes (integrity and non-repudiation not considered)
 * Command line argument support
+* Supporting passing Slack token as an argument
   
 
 ## Prerequisites
@@ -21,7 +22,7 @@ This Python script scans a Slack workspace to count the number of reactions for 
 ## Setup
 * Create a Slack app and obtain a bot token with the required scopes.
 * (NO LONGER NEEDED) Invite the bot to the channels you want it to scan.
-* Replace 'your-slack-bot-token' in the script with your actual bot token.
+* Replace 'your-slack-bot-token' in the script with your actual bot token OR pass the token via command line
 * Feel free to tweak the rate-limiter for your specific Slack configuration. Set to not trigger the basic (free) Slack workspace params.
 
 ## Usage
@@ -31,6 +32,11 @@ python SlackCounter.py
 ```
 
 If the SQL database does not exist locally yet, it will be created at this point. 
+
+If passing the token:
+```
+python SlackCounter.py -t MY-TOKEN-TO-SLACK
+```
 
 2. Enter the emoticon name (without colons, e.g., +1, rocket, heart) when prompted.
 3. The script will output the top users (received the most of the specified emoticon), along with a tally of the number of reactions received.
@@ -54,7 +60,9 @@ options:
   -p PULL_CHOICE, --pull PULL_CHOICE
                         Pull from Slack & DB (1) or just from DB (2)
   -o OUTPUT_STR, --output OUTPUT_STR
-                        set as 'asc' to change order
+                        Set as 'desc' to change order
+  -t TOKEN_STR, -token TOKEN_STR, -T TOKEN_STR, --token TOKEN_STR
+                        Pass Slack Token
 ```
 #### -csv [CSV_FILE]
 You can call 'verbose mode' to get a more detailed output of work done. Only required for diagnosing or curious parties. You can pass a filename or leave blank, in which case it defualts to 'SlackCounter.csv'.
@@ -97,7 +105,14 @@ Allows you to set the output in ascending versus descending order. Options "asc"
 python SlackCounter.py -o ascend
 ```
 
-All arguments can be combined. For example verbose mode enabled, custom csv, 5 second rate limit, list size of 20, pull option 1, emoticon 'nyu', and output ascending:
+#### -t TOKEN
+Pass the token instead of storing in script:
+
 ```
-python SlackCounter.py -v -r 5 -csv output.csv -e nyu -p 1 -o asc
+python SlackCounter.py -t MY-TOKEN-TO-SLACK
+```
+
+All arguments can be combined. For example verbose mode enabled, custom csv, 5 second rate limit, list size of 20, pull option 1, emoticon 'nyu', output ascending, and passing the token:
+```
+python SlackCounter.py -v -r 5 -csv output.csv -e nyu -p 1 -o asc -t MY-TOKEN-TO-SLACK
 ```
