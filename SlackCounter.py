@@ -10,8 +10,8 @@ import csv
 from tqdm import tqdm
 
 # Params
-client = WebClient(token='INSERT-TOKEN-HERE')  # ideally pull securely
-
+token_param = 'INSERT-TOKEN-HERE'  # ideally pass securely
+client = None
 default_csv_name = "SlackCounter.csv"
 size_of_list = 25
 rate_limit_in_seconds = 1
@@ -103,6 +103,7 @@ def get_user_reactions(emoticon):
 #### Slack API Helper Funcs
 
 def get_user_info(user_id):
+    global client
     try:
         response = client.users_info(user=user_id)
         return response['user']
@@ -112,6 +113,7 @@ def get_user_info(user_id):
         return None
 
 def get_user_names(user_ids):
+    global client
     user_names = {}
     for user_id in user_ids:
         try:
@@ -124,6 +126,7 @@ def get_user_names(user_ids):
     return user_names
 
 def get_channels():
+    global client
     try:
         response = client.conversations_list()
         channels = response['channels']
@@ -134,6 +137,7 @@ def get_channels():
         return []
 
 def get_all_messages(channel_id, channel_name):
+    global client
     try:
         rate_limiter.rate_limit()
         messages = []
@@ -151,6 +155,7 @@ def get_all_messages(channel_id, channel_name):
         return []
 
 def get_thread_messages(channel_id, thread_ts):
+    global client
     try:
         rate_limiter.rate_limit()
         messages = []
@@ -168,6 +173,7 @@ def get_thread_messages(channel_id, thread_ts):
         return []
 
 def get_channel_members(channel_id):
+    global client
     try:
         response = client.conversations_members(channel=channel_id)
         return response['members']
@@ -179,6 +185,7 @@ def get_channel_members(channel_id):
 #### Count Functions
 
 def count_emoticon_reactions(emoticon):
+    global client
     channels = get_channels()
     user_reactions = defaultdict(int)
 
@@ -293,6 +300,10 @@ def main():
     global pull_int
     global output_order
     
+    global client
+    global token_param
+    
+    
     parser = argparse.ArgumentParser(description="Slack Reaction Counter")
     
     parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbose output')
@@ -303,7 +314,9 @@ def main():
     parser.add_argument('-e', '--reaction','--emoticon', type=str, metavar='EMOTICON_STR', help='Pass reaction emoticon')
     parser.add_argument('-p', '--pull', type=int, metavar='PULL_CHOICE', help='Pull from Slack & DB (1) or just from DB (2)')
     
-    parser.add_argument('-o', '--output', type=str, metavar='OUTPUT_STR', help="set as 'desc' to change order")
+    parser.add_argument('-o', '--output', type=str, metavar='OUTPUT_STR', help="Set as 'desc' to change order")
+    
+    parser.add_argument('-t', '-token', '-T', '--token', type=str, metavar='TOKEN_STR', help="Pass Slack Token")
     
     args = parser.parse_args()
     
@@ -314,6 +327,14 @@ def main():
             output_order = False
         if verbose:
             print("Output order: ", output_order)
+            
+    if args.token is not None:
+        token_param = args.token
+        if verbose:
+            print("Token Passed: ", token_param)
+            
+    client = WebClient(token=token_param) #setting up our Slack Web Client
+    
       
     if args.count is not None:
         size_of_list = args.count
